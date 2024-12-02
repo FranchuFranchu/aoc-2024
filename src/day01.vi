@@ -1,0 +1,156 @@
+use std::io::IO::read_line;
+use std::option::Option::Some;
+
+pub fn load_newline_separated(&io: &IO) -> List[String] {
+	let list = [];
+	loop {
+		if io.read_line() is Some(line) {
+			list.push_back(line);
+		} else {
+			return list;
+		}
+	}
+}
+
+pub fn split_by_spaces_ignore_empty(s: String) -> List[String] {
+	let list = [];
+	let current = "";
+	loop {
+		match s.pop_front() {
+			Some(c) => {
+				if current.len() == 0 && c == ' ' {
+
+				} else if c == ' ' {
+					list.push_back(current);
+					current = "";
+				} else {
+					current.push_back(c);
+				}
+			},
+			None => {
+				list.push_back(current);
+				return list;
+			}
+		}
+	}
+}
+
+pub fn get_first_and_second(l: List[List[String]]) -> (List[N32], List[N32]) {
+	let a = [];
+	let b = [];
+	loop {
+		if l.pop_front() is Some(i) {
+			if i.pop_front() is Some(ea) {
+				if i.pop_front() is Some(eb) {
+					if N32::parse(ea) is Some(na) {
+						if N32::parse(eb) is Some(nb) {
+							a.push_back(na);
+							b.push_back(nb);
+						}
+					}
+				}
+			}
+		} else {
+			return (a, b);
+		}
+	}
+}
+
+pub fn quicksort(l: List[N32]) -> List[N32] {
+	if l.pop_front() is Some(pivot) {
+		let a = [];
+		let b = [];
+		loop {
+			if l.pop_front() is Some(i) {
+				if i <= pivot {
+					a.push_back(i);
+				} else {
+					b.push_back(i);
+				}
+			} else {
+				break;
+			}
+		}
+		a = quicksort(a);
+		b = quicksort(b);
+		a.concat([pivot]).concat(b)
+	} else {
+		[]
+	}
+}
+
+pub fn zip[T, U](a: List[T], b: List[U]) -> List[(T, U)] {
+	let result = [];
+	loop {
+		if a.pop_front() is Some(i) {
+			if b.pop_front() is Some(j) {
+				result.push_front((i, j))
+			} else {
+				return result;
+			}
+		} else {
+			return result;
+		}
+	}
+}
+
+pub fn fold[A, T](list: List[T], f: fn(A, T) -> A, a: A) -> A {
+	let result = a;
+	loop {
+		if list.pop_front() is Some(i) {
+			result = f(result, i);
+		} else {
+			return result;
+		}
+	} 
+}
+
+pub fn sum(list: List[N32]) -> N32 {
+	fold(list, fn(a: N32, b: N32) { a + b }, 0)
+}
+
+
+pub fn part_one(&io: &IO) {
+	let list = load_newline_separated(&io);
+	let list = list.map(split_by_spaces_ignore_empty)
+	let (a, b) = get_first_and_second(list);
+	let a = quicksort(a);
+	let b = quicksort(b);
+	let list = zip(a, b);
+	let list = list.map(fn((i, j): (N32, N32)) {
+		if i > j {
+			i - j
+		} else {
+			j - i
+		}
+	})
+	let sum = sum(list);
+	io.println(sum.to_string())
+}
+
+pub fn part_two(&io: &IO) {
+
+}
+
+pub fn count[T](a: List[T], b: T, cmp: fn(T, T) -> Bool) -> N32 {
+	let n = 0;
+	loop {
+		if a.pop_front() is Some(i) {
+			if cmp(i, b) {
+				n += 1
+			}
+		} else {
+			return n;
+		}
+	} 
+}
+
+pub fn main(&io: &IO) {
+	let list = load_newline_separated(&io);
+	let list = list.map(split_by_spaces_ignore_empty)
+	let (a, b) = get_first_and_second(list);
+	let similarity_score = a.map(fn(i: N32) {
+		i * count(b, i, fn(a: N32, b: N32) a == b)
+	})
+	io.println(sum(similarity_score).to_string())
+} 
