@@ -1,0 +1,234 @@
+// Parser combinators
+use std::{result::{Result, Result::{Ok, Err}}, option::{Option, Option::{Some, None}}};
+
+// (consumed, remaining)
+pub struct State(List[Char], List[Char]);
+
+pub mod State {
+	pub fn consumed(&State(a, _): &State) -> N32 {
+		a.len()
+	}
+	pub fn remaining(&State(_, b): &State) -> N32 {
+		b.len()
+	}
+	pub fn backtrack_one(&State(a, b): &State) {
+		if a.pop_front() is Some(a) {
+			b.push_front(a);
+		}
+	}
+	pub fn peek_one(&State(a, b): &State) -> Option[Char] {
+		if b.pop_front() is Some(c) {
+			b.push_front(c);
+			Some(c)
+		} else {
+			None
+		}
+	}
+	pub fn advance_one(&State(a, b): &State) {
+		if b.pop_front() is Some(c) {
+			a.push_front(c);
+		}
+	}
+	pub fn from_string(s: String) -> State {
+		State([], s)
+	}
+}
+
+fn default_with[T, E](parser: fn(&State) -> Result[T, E], default: fn(&State, E) -> T) -> fn(&State) -> T {
+	return fn(&state: &State) {
+		let o_consumed = state.consumed();
+		match parser(&state) {
+			Ok(t) => t,
+			Err(e) => {
+				let n_consumed = state.consumed();
+				let difference = n_consumed - o_consumed;
+				while difference > 0 {
+					state.backtrack_one();
+				}
+				default(&state, e)
+			}
+		}
+	}
+}
+fn default[T, E](parser: fn(&State) -> Result[T, E], test: fn(&State) -> T) -> fn(&State) -> T {
+	default_with(parser, fn(s, e) { test(s) })
+}
+fn before[T, U](ignore: fn(&State) -> T, after: fn(&State) -> U) -> fn(&State) -> U {
+	return fn(&state: &State) {
+		ignore(&state);
+		after(&state)
+	}
+}
+fn after[T, U](before: fn(&State) -> T, ignore: fn(&State) -> U) -> fn(&State) -> T {
+	return fn(&state: &State) {
+		let r = before(&state);
+		ignore(&state);
+		r
+	}
+}
+fn parse_n32(&state: &State) -> Result[N32, String] {
+	fn char_to_n32(c: Char) -> Option[N32] {
+		let c = c.as_n32();
+		if c >= '0'.as_n32() && c <= '9'.as_n32() {
+			Some(c - '0'.as_n32())
+		} else {
+			None
+		}
+	}
+	if state.peek_one() is Some(c) && char_to_n32(c) is Some(n) {
+		state.advance_one();
+		loop {
+			if state.peek_one() is Some(c) && char_to_n32(c) is Some(d) {
+				state.advance_one();
+				n = n * 10 + d;
+			} else {
+				return Ok(n)
+			}
+		}
+	} else { 
+		return Err("reached EOF!") 
+	}
+}
+fn skip_whitespace(&state: &State) {
+	// done to avoid divergence bugs
+	loop {
+		let qux = if state.peek_one() is Some(c) && (c == ' ' || c == '\n' || c == '\t') {
+			state.advance_one();
+			false
+		} else {
+			true
+		};
+		if qux {
+			break;
+		}
+	}
+}
+fn is_eof(&state: &State) -> Bool {
+	state.remaining() == 0
+}
+fn invert[T](a: fn(T) -> Bool) -> fn(T) -> Bool {
+	return fn(b) {
+		!a(b)
+	}
+}
+fn map[T, U](parser: fn(&State) -> T, f: fn(T) -> U) -> fn(&State) -> U {
+	return fn(state) {
+		f(parser(state))
+	}
+}
+fn repeat_while[T](repeat: fn(&State) -> T, cond: fn(&State) -> Bool) -> fn(&State) -> List[T] {
+	return fn(&state: &State) {
+		let l = [];
+		loop {
+			if !cond(&state) {
+				return l;
+			}
+			l.push_back(repeat(&state));
+		}
+	}
+}
+fn first_error[T, U](a: List[Result[T, U]]) -> Result[List[T], U] {
+	let l = [];
+	loop {
+		match a.pop_front() {
+			Some(Ok(o)) => l.push_back(o),
+			Some(Err(e)) => return Err(e),
+			None => return Ok(l),
+		}
+	}
+}
+
+pub fn report_is_safe(levels: List[N32]) -> Bool {
+	let levels_adv = levels;
+	levels_adv.pop_front();
+	let increasing = None;
+	loop {
+		let j = levels_adv.pop_front();
+		let i = levels.pop_front();
+		if i is Some(i) && j is Some(j) {
+			if i > j {
+				if increasing.unwrap_or(false) == true {
+					break false;
+				}
+				increasing = Some(false)
+				if i - j < 1 || i - j > 3 {
+					break false;
+				}
+			} else {
+				if increasing.unwrap_or(true) == false {
+					break false;
+				}
+				increasing = Some(true)
+				if j - i < 1 || j - i > 3 {
+					break false;
+				}
+			}
+		} else {
+			break true;
+		}
+	}
+}
+
+
+pub fn part_one(&io: &IO) {
+	let parser = map(repeat_while(before(skip_whitespace, parse_n32), invert(is_eof)), first_error);
+	let n = 0;
+	loop {
+		if io.read_line() is Some(s) {
+			let s = State::from_string(s);
+			let result = parser(&s);
+			if result is Ok(report) {
+				if report_is_safe(report) {
+					n += 1;
+				}
+			}
+		} else {
+			break;
+		}
+	}
+	io.println(n.to_string())
+}
+
+
+pub fn part_two(&io: &IO) {
+	let parser = map(repeat_while(before(skip_whitespace, parse_n32), invert(is_eof)), first_error);
+	let n = 0;
+	loop {
+		if io.read_line() is Some(s) {
+			let s = State::from_string(s);
+			let result = parser(&s);
+			if result is Ok(report) {
+				let possible_reports = [];
+				loop {
+					if possible_reports.len() == report.len() {
+						break;
+					}
+					let i = 0;
+					let building_report = [];
+					let this_report = report;
+					loop {
+						if this_report.pop_front() is Some(a) {
+							if i != possible_reports.len() {
+								building_report.push_back(a);
+							}
+							i += 1;
+						} else {
+							break;
+						}
+					}
+					possible_reports.push_back(building_report);
+				}
+				if fold(possible_reports.map(report_is_safe), fn(a: Bool, b: Bool) { a | b }, false) {
+					n += 1;
+				}
+			}
+		} else {
+			break;
+		}
+	}
+	io.println(n.to_string())
+}
+
+pub fn main(&io: &IO) {
+	part_two(&io);
+}

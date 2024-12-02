@@ -1,4 +1,6 @@
 use std::io::IO::read_line;
+mod util = "./util.vi";
+use util::fold;
 use std::option::Option::Some;
 
 pub fn load_newline_separated(&io: &IO) -> List[String] {
@@ -92,17 +94,6 @@ pub fn zip[T, U](a: List[T], b: List[U]) -> List[(T, U)] {
 			return result;
 		}
 	}
-}
-
-pub fn fold[A, T](list: List[T], f: fn(A, T) -> A, a: A) -> A {
-	let result = a;
-	loop {
-		if list.pop_front() is Some(i) {
-			result = f(result, i);
-		} else {
-			return result;
-		}
-	} 
 }
 
 pub fn sum(list: List[N32]) -> N32 {

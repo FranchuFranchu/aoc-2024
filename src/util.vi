@@ -1,0 +1,11 @@
+
+pub fn fold[A, T](list: List[T], f: fn(A, T) -> A, a: A) -> A {
+	let result = a;
+	loop {
+		if list.pop_front() is Some(i) {
+			result = f(result, i);
+		} else {
+			return result;
+		}
+	} 
+}
