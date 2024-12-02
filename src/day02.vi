@@ -1,3 +1,7 @@
+
+mod util = "./util.vi";
+use util::fold;
+
 // Parser combinators
 use std::{result::{Result, Result::{Ok, Err}}, option::{Option, Option::{Some, None}}};
 
