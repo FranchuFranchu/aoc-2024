@@ -96,9 +96,6 @@ pub fn zip[T, U](a: List[T], b: List[U]) -> List[(T, U)] {
 	}
 }
 
-pub fn sum(list: List[N32]) -> N32 {
-	fold(list, fn(a: N32, b: N32) { a + b }, 0)
-}
 
 
 pub fn part_one(&io: &IO) {
@@ -120,7 +117,13 @@ pub fn part_one(&io: &IO) {
 }
 
 pub fn part_two(&io: &IO) {
-
+	let list = load_newline_separated(&io);
+	let list = list.map(split_by_spaces_ignore_empty)
+	let (a, b) = get_first_and_second(list);
+	let similarity_score = a.map(fn(i: N32) {
+		i * count(b, i, fn(a: N32, b: N32) a == b)
+	})
+	io.println(sum(similarity_score).to_string())
 }
 
 pub fn count[T](a: List[T], b: T, cmp: fn(T, T) -> Bool) -> N32 {
@@ -137,11 +140,5 @@ pub fn count[T](a: List[T], b: T, cmp: fn(T, T) -> Bool) -> N32 {
 }
 
 pub fn main(&io: &IO) {
-	let list = load_newline_separated(&io);
-	let list = list.map(split_by_spaces_ignore_empty)
-	let (a, b) = get_first_and_second(list);
-	let similarity_score = a.map(fn(i: N32) {
-		i * count(b, i, fn(a: N32, b: N32) a == b)
-	})
-	io.println(sum(similarity_score).to_string())
+	part_two(&io);
 } 

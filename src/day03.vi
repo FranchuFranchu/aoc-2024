@@ -1,0 +1,87 @@
+mod util = "./util.vi";
+use std::option::Option::{Some, None};
+use std::result::Result;
+use util::{fold, sum, repeat_while, pair_and, default, before, after, is_eof, map, invert, State, parse_expect, parse_n32, pair};
+
+fn part_two(&io: &IO, input: String) -> N32 {
+	let activated_parser = 
+		repeat_while(default(
+			map((
+				pair_and(pair(parse_expect("mul("), 
+				pair_and(pair(parse_n32,
+				pair_and(pair(parse_expect(","), 
+				pair_and(pair(parse_n32, 
+				parse_expect(")")))))))))
+			), fn(x: Result[((), (N32, ((), (N32, ())))), String]) { x.map(fn((_, (a, (_, (b, _)))): ((), (N32, ((), (N32, ()))))) { a * b }) }) ,
+			fn(&s: &State) {
+				while s.peek_one().map(fn(x: Char) x != 'm' && x != 'd').unwrap_or(false) {
+					s.advance_one();
+				}
+				0
+			}
+		), fn(&s: &State) {
+			parse_expect("don't()")(&s).map(fn((): ()) { false }).unwrap_or(true) && !is_eof(&s)
+		});
+	let deactivated_parser = repeat_while(
+			fn(&s: &State) {
+				while s.peek_one().map(fn(x: Char) x != 'd').unwrap_or(false) {
+					s.advance_one();
+				}
+				0
+			},
+		fn(&s: &State) {
+			parse_expect("do()")(&s).map(fn((): ()) { false }).unwrap_or(true) && !is_eof(&s)
+		});
+	let parser = fn(&state: &State) {
+		let activated = true;
+		let n = 0;
+		loop {
+			if activated {
+				n += sum(activated_parser(&state));
+				activated = false;
+			} else {
+				n += sum(deactivated_parser(&state));
+				activated = true;
+			}
+			if is_eof(&state) {
+				break n;
+			}
+		}
+	}
+	let state = State::from_string(input);
+
+	let result = parser(&state);
+	result
+}
+
+fn part_one(&io: &IO, input: String) -> N32 {
+	let parser = repeat_while(default(
+		map((
+			pair_and(pair(parse_expect("mul("), 
+			pair_and(pair(parse_n32,
+			pair_and(pair(parse_expect(","), 
+			pair_and(pair(parse_n32, 
+			parse_expect(")")))))))))
+		), fn(x: Result[((), (N32, ((), (N32, ())))), String]) { x.map(fn((_, (a, (_, (b, _)))): ((), (N32, ((), (N32, ()))))) { a * b }) }) ,
+		fn(&s: &State) {
+			while s.peek_one().map(fn(x: Char) x != 'm').unwrap_or(false) {
+				s.advance_one();
+			}
+			0
+		}
+	), invert(is_eof));
+
+	let state = State::from_string(input);
+
+	let result = parser(&state);
+	let result = sum(result);
+	result
+}
+
+pub fn main(&io: &IO) {
+	let s = io.full_input();
+	let n = "Part 1: " ++ part_one(&io, s).to_string();
+	io.println(n)
+	let n = "Part 2: " ++ part_two(&io, s).to_string();
+	io.println(n)
+}
