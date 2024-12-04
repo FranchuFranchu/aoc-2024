@@ -23,12 +23,7 @@ fn part_two(&io: &IO, input: String) -> N32 {
 			parse_expect("don't()")(&s).map(fn((): ()) { false }).unwrap_or(true) && !is_eof(&s)
 		});
 	let deactivated_parser = repeat_while(
-			fn(&s: &State) {
-				while s.peek_one().map(fn(x: Char) x != 'd').unwrap_or(false) {
-					s.advance_one();
-				}
-				0
-			},
+			fn(&s: &State) {2
 		fn(&s: &State) {
 			parse_expect("do()")(&s).map(fn((): ()) { false }).unwrap_or(true) && !is_eof(&s)
 		});

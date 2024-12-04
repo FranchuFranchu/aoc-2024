@@ -174,3 +174,42 @@ pub fn pair_and[T, U, V](parser: fn(&State) -> (Result[T, V], Result[U, V])) -> 
 pub fn sum(list: List[N32]) -> N32 {
 	fold(list, fn(a: N32, b: N32) { a + b }, 0)
 }
+
+
+pub fn quicksort(l: List[N32]) -> List[N32] {
+	if l.pop_front() is Some(pivot) {
+		let a = [];
+		let b = [];
+		loop {
+			if l.pop_front() is Some(i) {
+				if i <= pivot {
+					a.push_back(i);
+				} else {
+					b.push_back(i);
+				}
+			} else {
+				break;
+			}
+		}
+		a = quicksort(a);
+		b = quicksort(b);
+		a.concat([pivot]).concat(b)
+	} else {
+		[]
+	}
+}
+
+pub fn zip[T, U](a: List[T], b: List[U]) -> List[(T, U)] {
+	let result = [];
+	loop {
+		if a.pop_front() is Some(i) {
+			if b.pop_front() is Some(j) {
+				result.push_back((i, j))
+			} else {
+				break result;
+			}
+		} else {
+			break result;
+		}
+	}
+}

@@ -1,0 +1,186 @@
+use std::option::Option::Some;
+pub mod util = "./util.vi";
+use util::fold;
+
+fn reverse[T](old: List[T]) -> List[T] {
+	let new = [];
+	while old.pop_front() is Some(i) {
+		new.push_front(i)
+	}
+	new
+}
+
+fn inner_reverse[T](l: List[List[T]]) -> List[List[T]] {
+	l.map(reverse)
+}
+
+fn remove_first_column[T](&a: &List[List[T]]) -> Option[List[T]] {
+	let col = None;
+	use std::option::Option;
+	use std::option::Option::None;
+	a = {
+		let new = [];
+		if a.pop_front() is Some(i) {
+			if i.pop_front() is Some(j) {
+				let l = [];
+				l.push_back(j)
+				new.push_back(i);
+				while a.pop_front() is Some(i) {
+					l.push_back(i.pop_front().unwrap())
+					new.push_back(i);
+				}
+				col = Some(l)
+				new
+			} else {
+				new.push_front(i);
+				new ++= a;
+				new
+			}
+		} else {
+			[]
+		}
+	}
+	col
+}
+fn add_first_column[T](a: List[List[T]], l: List[T]) -> List[List[T]] {
+	let new = [];
+	while a.pop_front() is Some(i) {
+		if l.pop_front() is Some(j) { i.push_front(j) };
+		new.push_back(i);
+	}
+	new
+}
+
+fn gen_translations[T](list: List[List[T]]) -> List[List[List[T]]] {
+	let result = [];
+	loop {
+		let list_inner = list;
+		loop {
+			result ++= [list_inner]
+			if list_inner.pop_front() is Some(i) {
+			} else {
+				break;
+			}
+		}
+		if remove_first_column(&list) is Some(i) {
+
+		} else {
+			break;
+		}
+	}
+	return result
+}
+
+
+pub fn land(list: List[Bool]) -> Bool {
+	fold(list, fn(a: Bool, b: Bool) { a && b }, true)
+}
+
+
+pub fn matches_1d(grid: String, pat: String) -> Bool {
+	use util::zip;
+	if pat.len() > grid.len() {
+		return false
+	}
+	while grid.pop_front() is Some(p) && pat.pop_front() is Some(q) {
+		if p != q && q != '.' {
+			return false;
+		}
+	}
+	if pat.len() > 0 {
+		return false
+	}
+	return true
+}
+
+pub fn matches_2d(grid: List[String], pat: List[String]) -> Bool {
+	if pat.len() > grid.len() {
+		return false
+	}
+	while grid.pop_front() is Some(i) && pat.pop_front() is Some(j) {
+		if !matches_1d(i, j) {
+			return false
+		}
+	}
+	if pat.len() > 0 {
+		return false
+	}
+	return true
+}
+
+fn part_two_patterns() -> List[List[String]] {
+	let p = [
+		"M.S",
+		".A.",
+		"M.S",
+	]
+	let q = [
+		"M.M",
+		".A.",
+		"S.S",
+	]
+	[p, q, reverse(q), inner_reverse(p)]
+}
+fn part_one_patterns() -> List[List[String]] {
+	let h = ["XMAS"];
+	let v = [
+			"X",
+			"M",
+			"A",
+			"S",
+		];
+	let d = [
+		"X...",
+		".M..",
+		"..A.",
+		"...S",
+	];
+	[
+		v,
+		h,
+		reverse(v),
+		inner_reverse(h),
+		d,
+		reverse(d),
+		inner_reverse(d),
+		reverse(inner_reverse(d)),
+	]
+}
+
+pub fn main(&io: &IO) {
+	use std::option::Option;
+	let l = []
+	while io.read_line() is Option::Some(i) {
+		l.push_back(i)
+	}
+	let l = gen_translations(l);
+
+	// patterns
+	let part_one_pats = part_one_patterns();
+	let part_two_pats = part_two_patterns();
+	let part1_n = 0;
+	let part2_n = 0;
+
+	// progress counter, when it reaches 20 it's done.
+	let len = l.len()
+	let i = 0;
+	let p = 0;
+
+	while l.pop_front() is Some(grid) {
+		if (i * 20) / len > p {
+			p += 1
+			io.println(p.to_string())
+		}
+		i += 1;
+		let res1 = util::sum(part_one_pats.map(fn(pat) {
+			if matches_2d(grid, pat) { 1 } else { 0 }
+		}));
+		let res2 = util::sum(part_two_pats.map(fn(pat) {
+			if matches_2d(grid, pat) { 1 } else { 0 }
+		}));
+		part1_n += res1; 
+		part2_n += res2; 
+	}
+	io.println("Part 1: " ++ part1_n.to_string())
+	io.println("Part 2: " ++ part2_n.to_string())
+}
