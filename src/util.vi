@@ -42,6 +42,7 @@ pub fn default_with[T, E](parser: fn(&State) -> Result[T, E], default: fn(&State
 			Ok(t) => t,
 			Err(e) => {
 				// TODO doesn't actually work
+				state.backtrack_one();
 				default(&state, e)
 			}
 		}
@@ -141,7 +142,7 @@ pub fn first_error[T, U](a: List[Result[T, U]]) -> Result[List[T], U] {
 		}
 	}
 }
-pub fn parse_expect[T, U](s: String) -> fn(&State) -> Result[(), String] {
+pub fn expect[T, U](s: String) -> fn(&State) -> Result[(), String] {
 	return fn(&state: &State) {
 		while s.pop_front() is Some(c) {
 			if state.peek_one().map(fn(x: Char) x == c).unwrap_or(false) {
@@ -194,6 +195,31 @@ pub fn quicksort(l: List[N32]) -> List[N32] {
 		a = quicksort(a);
 		b = quicksort(b);
 		a.concat([pivot]).concat(b)
+	} else {
+		[]
+	}
+}
+mod mapm = "./map.vi";
+// is_lt return true if a <= b
+pub fn quicksort_by_state[T, U](l: List[T], is_lt: fn(&U, T, T) -> Bool , &state: &U) -> List[T] {
+	if l.pop_front() is Some(pivot) {
+		let a = [];
+		let b = [];
+		loop {
+			if l.pop_front() is Some(i) {
+
+				if is_lt(&state, i, pivot) {
+					a.push_back(i);
+				} else {
+					b.push_back(i);
+				}
+			} else {
+				break;
+			}
+		}
+		a = quicksort_by_state(a, is_lt, &state);
+		b = quicksort_by_state(b, is_lt, &state);
+		a ++ [pivot] ++ b
 	} else {
 		[]
 	}

@@ -1,0 +1,264 @@
+use std::option::Option;
+use Option::{None, Some};
+use std::list::List::pop_front;
+
+pub enum Ordering {
+    Less,
+    Equal,
+    Greater
+}
+mod Ordering {
+    pub fn to_string(o: Ordering) -> String {
+        match o {
+            Less => "Less",
+            Equal => "Equal",
+            Greater => "Greater",
+        }
+    }
+}
+
+pub fn number_ordering(a: N32, b: N32) -> Ordering {
+    if a > b {
+        Ordering::Greater
+    } else if a < b {
+        Ordering::Less
+    } else {
+        Ordering::Equal
+    }
+}
+pub fn list_ordering[T](a: List[T], b: List[T], order: fn(T, T) -> Ordering) -> Ordering {
+    use std::list::List;
+    use Ordering::{Less, Equal, Greater};
+    match (a.pop_front(), b.pop_front()) {
+        (None, None) => Equal,
+        (None, x) => Less,
+        (x, None) => Greater,
+        (Some(hd1), Some(hd2)) => match order(hd1, hd2) {
+            Less => Less,
+            Greater => Greater,
+            Equal => list_ordering(a, b, order),
+        }
+    }
+}
+pub fn string_ordering(a: String, b: String) -> Ordering {
+    list_ordering(a.map(Char::as_n32), b.map(Char::as_n32), number_ordering)
+}
+pub struct Map[K, V](
+    Node[K, V],
+    fn(K, K) -> Ordering,
+);
+pub mod Map {
+    pub fn insert[K, V](&Map(node, order): &Map[K, V], key: K, value: V) {
+        Node::insert(&node, key, value, order);
+    }
+    pub fn get[K, V](&Map(node, order): &Map[K, V], key: K) -> Option[V] {
+        Node::get(&node, key, order)
+    }
+    pub fn remove[K, V](&Map(node, order): &Map[K, V], key: K) -> Option[V] {
+        Node::remove(&node, key, order)
+    }
+    pub fn to_string[K, V](Map(node, order): Map[K, V], show_k: fn(K) -> String, show_v: fn(V) -> String) -> String {
+        node.to_string(show_k, show_v)
+    }
+}
+
+pub enum Color {
+    Red,
+    Black,
+}
+
+pub enum Node[K, V] {
+    Binary(Color, Node[K, V], Node[K, V], (K, V)),
+    Nil,
+}
+
+use Color::{Black, Red};
+use Node::{Binary, Nil};
+pub mod Node {
+    pub fn is_red[K, V](&n: &Node[K, V]) -> Bool {
+        let ret = false;
+        n = match n {
+            Binary(Red, l, r, v) => {
+                ret = true;
+                Binary(Red, l, r, v)
+            },
+            Binary(Black, l, r, v) => {
+                Binary(Black, l, r, v)
+            },
+            Nil => Nil,
+        };
+        ret
+    }
+    pub fn flip_color[K, V](&n: &Node[K, V]) {
+        n = match n {
+            Binary(Red, l, r, v) => {
+                Binary(Black, l, r, v)
+            },
+            Binary(Black, l, r, v) => {
+                Binary(Red, l, r, v)
+            },
+            Nil => Nil,
+        };
+    }
+    pub fn push[K, V](self: Node[K, V], other: Node[K, V]) -> Node[K, V] {
+        match self {
+            Binary(c,l,r,v) => fix(Binary(c, l, r.push(other), v)),
+            Nil => other,
+        }
+    }
+    pub fn rotl[K, V](self: Node[K, V]) -> Node[K, V]  {
+        match self {
+            Binary(cl,ll,Binary(cr,lr,rr,vr),vl) => Binary(cl,Binary(cr,ll,lr,vr),rr,vl),
+            Binary(cl, ll, Nil, vl) => Binary(cl, ll, Nil, vl),
+            Nil => Nil,
+        }
+    }
+    pub fn rotr[K, V](self: Node[K, V]) -> Node[K, V] {
+        match self {
+            Binary(cl,Binary(cr,ll,lr,vr),rr,vl) => Binary(cl,ll,Binary(cr,lr,rr,vr),vl),
+            Binary(cl, Nil, lr, vl) => Binary(cl, Nil, lr, vl),
+            Nil => Nil,
+        }
+    }
+    pub fn fix[K, V](self: Node[K, V]) -> Node[K, V]  {
+        match self {
+            Binary(uc, ul, ur, uv) => {
+                match uc {
+                    Red => {
+                        if ul.is_red() {
+                            ul.flip_color();
+                            rotl(Binary(Red, ul, ur, uv))
+                        } else if ur.is_red() {
+                            ur.flip_color();
+                            rotr(Binary(Red, ul, ur, uv))
+                        } else {
+                            Binary(Red, ul, ur, uv)
+                        }
+                    },
+                    Black => Binary(Black, ul, ur, uv)
+                }
+            },
+            Nil => Nil
+        }
+    }
+    pub fn insert[K, V](&self: &Node[K, V], key: K, value: V, order: fn(K, K) -> Ordering) {
+        use Ordering::{Equal, Greater, Less};
+        self = fix(match self {
+            Nil => Binary(Black, Nil, Nil, (key, value)),
+            Binary(color, left, right, (nkey, nvalue)) => match order(key, nkey) {
+                Greater => Binary(color, left, { right.insert(key, value, order); right}, (nkey, nvalue)),
+                Less => Binary(color, { left.insert(key, value, order); left }, right, (nkey, nvalue)),
+                Equal => Binary(color, left, right, (key, value)),
+            }
+        });
+    }
+    pub fn get[K, V](&self: &Node[K, V], key: K, order: fn(K, K) -> Ordering) -> Option[V] {
+        use Ordering::{Equal, Greater, Less};
+        match &self {
+            &Nil => None,
+            &Binary(color, left, right, q) => {
+                let (nkey, nvalue) = q;
+                match order(key, nkey) {
+                    Equal => Some(nvalue),
+                    Less => left.get(key, order),
+                    Greater => right.get(key, order),
+                }
+            }
+        }
+    }
+    pub fn remove[K, V](&self: &Node[K, V], key: K, order: fn(K, K) -> Ordering) -> Option[V] {
+        use Ordering::{Equal, Greater, Less};
+        match &self {
+            &Nil => None,
+            &Binary(color, left, right, (nkey, nvalue)) => match order(key, nkey) {
+                Equal => {
+                    self = fix(left.push(right));
+                    Some(nvalue)
+                },
+                Less => left.remove(key, order),
+                Greater => right.remove(key, order),
+            }
+        }
+    }
+    pub fn to_string[K, V](self: Node[K, V], show_k: fn(K) -> String, show_v: fn(V) -> String) -> String {
+        match self {
+            Nil => "()",
+            Binary(Red, l, r, (k, v)) => "R(" ++ to_string(l, show_k, show_v) ++ ", " ++ show_k(k) ++ ": " ++ show_v(v) ++ ", " ++ to_string(r, show_k, show_v) ++ ")",
+            Binary(Black, l, r, (k, v)) => "B(" ++ to_string(l, show_k, show_v) ++ ", " ++ show_k(k) ++ ": " ++ show_v(v) ++ ", " ++ to_string(r, show_k, show_v) ++ ")",
+        }
+    }
+    pub fn max_depth[K, V](&self: &Node[K, V]) -> N32 {
+        match &self {
+            &Nil => 0,
+            &Binary(color, left, right, (nkey, nvalue)) => {
+                let left = left.max_depth();
+                let right = right.max_depth();
+                if left > right {
+                    left + 1
+                } else {
+                    right + 1
+                }
+            }
+        }
+    }
+}
+
+
+use std::list::List;
+
+use Node::to_string;
+
+pub fn test(&io: &IO) {
+    use Map::{get, insert, remove};
+    let map = Map(Node::Nil, number_ordering);
+    let seed = 3732423;
+    let original_seed = seed;
+    let n = 1000;
+    while n > 0 {
+        n -= 1;
+        let num = rand(&seed);
+        map.insert(num, num * num)
+    }
+    return;
+    seed = original_seed;
+    let n = 1000;
+    while n > 0 {
+        n -= 1;
+        let num = rand(&seed);
+        if map.get(num).unwrap_or(0) != num * num {
+            io.println(":(");
+        }
+    }
+    seed = original_seed;
+    let n = 1000;
+    while n > 0 {
+        n -= 1;
+        let num = rand(&seed);
+        if map.remove(num).unwrap_or(0) != num * num {
+            io.println(":(");
+        }
+    }
+}
+
+pub fn rand(&seed: &N32) -> N32 {
+    seed = seed * 49081047 + 93120830;
+    seed
+}
+
+pub fn main(&io: &IO) {
+    let map = Map(Node::Nil, string_ordering);
+    map.insert("BR", "Brazil")
+    map.insert("DE", "Germany")
+    map.insert("US", "United States")
+    map.insert("UK", "United Kingdom")
+    io.println("get(US): " ++ map.get("US").unwrap_or("Not found"))
+    io.println("get(DE): " ++ map.get("DE").unwrap_or("Not found"))
+    io.println("get(UK): " ++ map.get("UK").unwrap_or("Not found"))
+    io.println("remove(US): " ++ map.remove("US").unwrap_or("Not found"))
+    io.println("get(US): " ++ map.get("US").unwrap_or("Not found"))
+    io.println("get(AR): " ++ map.get("AR").unwrap_or("Not found"))
+    io.println("Inserting AR");
+    map.insert("AR", "Argentina")
+    io.println("get(AR): " ++ map.get("AR").unwrap_or("Not found"))
+    io.println("get(BR): " ++ map.remove("BR").unwrap_or("Not found"))
+}

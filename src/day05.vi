@@ -1,0 +1,118 @@
+mod map_mod = "./map.vi";
+use map_mod::{Map, number_ordering};
+mod util = "./util.vi";
+use util::{State,pair_and,parse_n32,default,expect,repeat_while,before,after,pair,first_error,map,quicksort};
+
+use std::option::Option::Some;
+
+pub fn repeat_while2[T](repeat: fn(&State) -> T, cond: fn(&State) -> Bool) -> fn(&State) -> List[T] {
+	return fn(&state: &State) {
+		let l = [];
+		loop {
+			if !cond(&state) {
+				return l;
+			}
+			l.push_back(repeat(&state));
+		}
+	}
+}
+pub fn get_middle[T](updates: List[T]) -> T {
+	fn get_middle_aux[T](updates: List[T], max_len: N32) -> T{
+		if updates.len() == max_len {
+			return updates.pop_front().unwrap();
+		}
+		updates.pop_front();
+		get_middle_aux(updates,max_len+1)
+	}
+	get_middle_aux(updates, 1)
+}
+pub fn contains(haystack: List[N32], needle: N32) -> Bool {
+	if haystack.len() == 0 {
+		return false
+	} else if haystack.pop_front() is Some(i) && i == needle {
+		return true
+	} else {
+		contains(haystack, needle)
+	}
+}
+pub fn main(&io: &IO) {
+	let state = State::from_string(io.full_input());
+	let single_rule_parser = pair_and(pair(
+		parse_n32,
+		before(expect("|"),parse_n32)
+	));
+	let update_parser = map(repeat_while2(
+		after(parse_n32,fn(&s: &State) {
+			if s.peek_one().unwrap_or(',') == ',' {
+				s.advance_one();
+			}
+		}),
+		fn(&state: &State) {
+			state.peek_one().unwrap_or('\n') != '\n'
+		}
+	), first_error);
+	let rules = map(repeat_while(single_rule_parser, fn(&state: &State) {
+		if state.peek_one().unwrap_or('\n') == '\n' {
+			state.advance_one();
+		}
+		state.peek_one().unwrap_or('\n') != '\n'
+	}), first_error);
+	let updates = map(repeat_while(update_parser, fn(&state: &State) {
+		if state.peek_one().unwrap_or('\n') == '\n' {
+			state.advance_one();
+		}
+		state.peek_one().unwrap_or('\n') != '\n'
+	}), first_error);
+	let rules = rules(&state).unwrap_or([]);
+	let updates = updates(&state).unwrap_or([]);
+	// io.println("Rules " ++ rules.len().to_string());
+	// io.println("Updates " ++ updates.len().to_string());
+
+	// PageNumber -> BannedPredecessors(page_number)
+	let rules_map = Map[N32, List[N32]](map_mod::Node::Nil, number_ordering);
+	while rules.pop_front() is Some((pred, succ)) {
+		let banned_preds = rules_map.get(pred).unwrap_or([]);
+		banned_preds.push_back(succ);
+		rules_map.insert(pred, banned_preds);
+	}
+	// io.println(rules_map.to_string(N32::to_string, fn(x: List[N32]) x.to_string(N32::to_string)))
+	let part1_sum = 0;
+	let part2_sum = 0;
+	while updates.pop_front() is Some(updates) {
+		let middle = get_middle(updates);
+		let updates_copy = updates;
+		let valid = true;
+		// io.println(updates.to_string(N32::to_string));
+		while updates.pop_front() is Some(a) {
+			let updates_2 = updates;
+			while updates_2.pop_front() is Some(b) {
+				// In the update, a < b
+				let banned_preds = rules_map.get(b).unwrap_or([]);
+				if contains(banned_preds, a) {
+					valid = false;
+					break;
+				}
+			}
+			if !valid {
+				break;
+			}
+		}
+		// io.println(if valid { "Valid" } else {"Invalid"})
+		if valid {
+			// io.println("Valid " ++ middle.to_string());
+			part1_sum += middle;
+		} else {
+			// It is incorrectly ordered. Order it
+			updates = updates_copy;
+			let updates = util::quicksort_by_state(updates, fn(&rules_map: &Map[N32, List[N32]], a: N32, b: N32) {
+				// a < b if b can't go before a
+				let banned_preds = rules_map.get(a).unwrap_or([]);
+				contains(banned_preds, b)
+			}, &rules_map)
+			let middle = get_middle(updates);
+			part2_sum += middle;
+		}
+	}
+	io.println("Part 1: " ++ part1_sum.to_string());
+	io.println("Part 2: " ++ part2_sum.to_string());
+}
