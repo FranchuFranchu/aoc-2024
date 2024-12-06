@@ -1,0 +1,165 @@
+use std::option::Option;
+use Option::{Some, None};
+mod map = "./map.vi";
+use map::{Map, Node, Ordering, number_ordering};
+
+enum CellState {
+    Obstacle,
+    Floor,
+    CanObstacle,
+    CantObstacle,
+}
+enum Direction {
+    North,
+    East,
+    South,
+    West,
+}
+mod Direction {
+    pub fn to_string(&self: &Direction) -> String {
+        match self {
+            North => "North",
+            East => "East",
+            South => "South",
+            West => "West",
+        }
+    }
+    pub fn next_direction(&self: &Direction, next_cell: CellState) {
+        match next_cell {
+            CellState::Obstacle => {
+                self = match self {
+                    North => East,
+                    East => South,
+                    South => West,
+                    West => North,
+                };
+            },
+            _ => (),
+        };
+    }
+    pub fn update_coords(self: Direction, (x, y): (N32, N32)) -> (N32, N32) {
+        match self {
+            North => (x, y - 1),
+            East => (x + 1, y),
+            South => (x, y + 1),
+            West => (x - 1, y),
+        }
+    }
+    pub fn to_idx(self: Direction) -> N32 {
+        match self {
+            North => 0,
+            East => 1,
+            South => 2,
+            West => 3,
+        }
+    }
+}
+
+pub fn tuple_ordering((ax, ay): (N32, N32), (bx, by): (N32, N32)) -> Ordering {
+    match number_ordering(ax, bx) {
+        Ordering::Less => Ordering::Less,
+        Ordering::Greater => Ordering::Greater,
+        Ordering::Equal => number_ordering(ay, by),
+    }
+}
+pub fn state_ordering((ap, ad): ((N32, N32), Direction), (bp, bd): ((N32, N32), Direction)) -> Ordering {
+    match tuple_ordering(ap, bp) {
+        Ordering::Less => Ordering::Less,
+        Ordering::Greater => Ordering::Greater,
+        Ordering::Equal => number_ordering(ad.to_idx(), bd.to_idx())
+    }
+}
+pub fn will_loop(&map: &Map[(N32, N32), CellState], had_states: Map[((N32, N32), Direction), ()], ((gx, gy), gd): ((N32, N32), Direction), (ox, oy): (N32, N32)) -> Bool {
+    
+    loop {
+        //io.println(gx.to_string() ++ ", " ++ gy.to_string())
+        //io.println(gd.to_string());
+        had_states.insert(((gx, gy), gd), ());
+        let (nx, ny) = gd.update_coords((gx, gy));
+        
+        let nc = map.get((nx, ny));
+        
+        if nc is Some(nc) {
+            if (ox == nx && oy == ny) || nc is CellState::Obstacle {
+                gd.next_direction(CellState::Obstacle);
+            } else {
+                if had_states.get(((nx, ny), gd)) is Some(()) {
+                    return true;
+                }
+                (gx, gy) = (nx, ny)
+            }
+        } else {
+            // Ran out of map.
+            return false;
+        }
+    }
+}
+
+
+pub fn main(&io: &IO){
+    let input = io.full_input();
+    let x = 0;
+    let y = 0;
+    let map = Map(Node::Nil, tuple_ordering);
+    let had_states = Map(Node::Nil, state_ordering);
+    let guard_coords = (0, 0);
+    while input.pop_front() is Some(i) {
+        if i == '.' {
+            map.insert((x, y), CellState::Floor);
+            x += 1;
+        } else if i == '#' {
+            map.insert((x, y), CellState::Obstacle);
+            x += 1;
+        } else if i == '\n' {
+            x = 0;
+            y += 1;
+        } else if i == '^' {
+            guard_coords = (x, y);
+            x += 1;
+            map.insert((x, y), CellState::Floor);
+        }
+    }
+    let (gx, gy) = guard_coords;
+    let gd = Direction::North;
+    map.insert((gx, gy), CellState::CantObstacle);
+    let i = 0;
+    loop {
+        //io.println(gx.to_string() ++ ", " ++ gy.to_string())
+        //io.println(gd.to_string());
+        i += 1;
+        io.println(i.to_string()++ " ");
+        had_states.insert(((gx, gy), gd), ());
+        let (nx, ny) = gd.update_coords((gx, gy));
+        let nc = map.get((nx, ny));
+        if nc is Some(nc) {
+            if nc is CellState::Obstacle {
+                gd.next_direction(nc);
+            } else if nc is CellState::Floor {
+                // Check if we can place an obstacle in the next position:
+                if will_loop(&map, had_states, ((gx, gy), gd), (nx, ny)) {
+                    map.insert((nx, ny), CellState::CanObstacle);
+                } else {
+                    map.insert((nx, ny), CellState::CantObstacle);
+                };
+                // Advance
+                (gx, gy) = (nx, ny)
+            } else {
+                // we've already analyzed what happens if we place an obstacle here 
+                (gx, gy) = (nx, ny)
+            }
+        } else {
+            // Ran out of map.
+            break;
+        }
+    }
+    mod util = "./util.vi";
+    use util::fold;
+    let d = map.to_list().map(fn((k, v): ((N32, N32), CellState)) match v  {
+        CellState::CanObstacle => (1, 1),
+        CellState::CantObstacle => (1, 0),
+        _ => (0, 0),
+    });
+    let (part1, part2) = fold(d, fn((i1, i2): (N32, N32), (a1, a2): (N32, N32)) { (i1 + a1, i2 + a2) }, (0, 0))
+    io.println("Part 1: " ++ part1.to_string())
+    io.println("Part 2: " ++ part2.to_string())
+}

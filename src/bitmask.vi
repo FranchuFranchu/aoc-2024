@@ -1,0 +1,91 @@
+
+
+struct Bitmask(List[N32]);
+
+pub fn get_at_list[T](&l: &List[T], idx: N32) -> Option[T] {
+    let l2 = []
+    while idx > 0 && l.pop_front() is Some(i) {
+        idx -= 1;
+        l2.push_front(i);
+    }
+    let next = l.pop_front();
+    if next is Some(i) {
+        l.push_front(i);
+    }
+    while l2.pop_front() is Some(i) {
+        l.push_front(i);
+    }
+    next
+}
+pub fn set_at_list[T](&l: &List[T], idx: N32, value: T) -> Option[()] {
+    let l2 = []
+    while idx > 0 && l.pop_front() is Some(i) {
+        idx -= 1;
+        l2.push_front(i);
+    }
+    let ret = if idx == 0 {
+        l.push_front(value);
+        Some(())
+    } else {
+        None
+    }
+    while l2.pop_front() is Some(i) {
+        l.push_front(i);
+    }
+    ret
+}
+
+mod Bitmask {
+    fn get_at(&Bitmask(l): &Bitmask, i: N32) -> Option[Bool] {
+        let inner = i & (32 - 1)
+        let outer = i >> 5;
+        if get_at_list(&l,outer) is Some(i) {
+            Some((i >> inner) & 1 != 0)
+        } else {
+            None
+        }
+    }
+    fn set_at(&Bitmask(l): &Bitmask, i: N32) -> Option[()] {
+        let inner = i & (32 - 1)
+        let outer = i >> 5;
+        if get_at_list(&l,outer) is Some(i) {
+            set_at_list(&l, outer, i | 1 << inner)
+        } else {
+            None
+        }
+    }
+    fn clear_at(&Bitmask(l): &Bitmask, i: N32) -> Option[()] {
+        let inner = i & (32 - 1)
+        let outer = i >> 5;
+        if get_at_list(&l,outer) is Some(i) {
+            set_at_list(&l, outer, i & (0xFFFFFFFF^(1 << inner)))
+        } else {
+            None
+        }
+    }
+}
+struct Bitmask2D(Bitmask, N32);
+mod Bitmask2D {
+    fn get_at(&Bitmask2D(b, w): &Bitmask2D, x: N32, y: N32) -> Option[Bool] {
+        x + y * 
+    }
+    fn set_at(&Bitmask2D(l): &Bitmask2D, i: N32) -> Option[()] {
+        let inner = i & (32 - 1)
+        let outer = i >> 5;
+        if get_at_list(&l,outer) is Some(i) {
+            set_at_list(&l, outer, i | 1 << inner)
+        } else {
+            None
+        }
+    }
+    fn clear_at(&Bitmask2D(l): &Bitmask2D, i: N32) -> Option[()] {
+        let inner = i & (32 - 1)
+        let outer = i >> 5;
+        if get_at_list(&l,outer) is Some(i) {
+            set_at_list(&l, outer, i & (0xFFFFFFFF^(1 << inner)))
+        } else {
+            None
+        }
+    }
+}
+

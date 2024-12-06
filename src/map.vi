@@ -60,6 +60,9 @@ pub mod Map {
     pub fn to_string[K, V](Map(node, order): Map[K, V], show_k: fn(K) -> String, show_v: fn(V) -> String) -> String {
         node.to_string(show_k, show_v)
     }
+    pub fn to_list[K, V](Map(node, order): Map[K, V]) -> List[(K, V)] {
+        node.to_list()
+    }
 }
 
 pub enum Color {
@@ -185,6 +188,12 @@ pub mod Node {
             Nil => "()",
             Binary(Red, l, r, (k, v)) => "R(" ++ to_string(l, show_k, show_v) ++ ", " ++ show_k(k) ++ ": " ++ show_v(v) ++ ", " ++ to_string(r, show_k, show_v) ++ ")",
             Binary(Black, l, r, (k, v)) => "B(" ++ to_string(l, show_k, show_v) ++ ", " ++ show_k(k) ++ ": " ++ show_v(v) ++ ", " ++ to_string(r, show_k, show_v) ++ ")",
+        }
+    }
+    pub fn to_list[K, V](self: Node[K, V]) -> List[(K, V)] {
+        match self {
+            Nil => [],
+            Binary(c, l, r, (k, v)) => l.to_list() ++ [(k, v)] ++ r.to_list()
         }
     }
     pub fn max_depth[K, V](&self: &Node[K, V]) -> N32 {
