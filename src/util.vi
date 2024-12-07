@@ -1,6 +1,8 @@
 
 // Parser combinators
 use std::{result::{Result, Result::{Ok, Err}}, option::{Option, Option::{Some, None}}};
+pub mod n64 = "./n64.vi";
+pub use n64::N64;
 
 // (consumed, remaining)
 pub struct State(List[Char], List[Char]);
@@ -71,15 +73,15 @@ pub fn pair[T, U](fst: fn(&State) -> T, snd: fn(&State) -> U) -> fn(&State) -> (
 		(fst, snd)
 	}
 }
-pub fn parse_n32(&state: &State) -> Result[N32, String] {
-	fn char_to_n32(c: Char) -> Option[N32] {
-		let c = c.as_n32();
-		if c >= '0'.as_n32() && c <= '9'.as_n32() {
-			Some(c - '0'.as_n32())
-		} else {
-			None
-		}
+fn char_to_n32(c: Char) -> Option[N32] {
+	let c = c.as_n32();
+	if c >= '0'.as_n32() && c <= '9'.as_n32() {
+		Some(c - '0'.as_n32())
+	} else {
+		None
 	}
+}
+pub fn parse_n32(&state: &State) -> Result[N32, String] {
 	if state.peek_one() is Some(c) && char_to_n32(c) is Some(n) {
 		state.advance_one();
 		loop {
@@ -91,7 +93,23 @@ pub fn parse_n32(&state: &State) -> Result[N32, String] {
 			}
 		}
 	} else { 
-		return Err("reached EOF!") 
+		return Err("parse_n32: reached EOF!") 
+	}
+}
+pub fn parse_n64(&state: &State) -> Result[N64, String] {
+	if state.peek_one() is Some(c) && char_to_n32(c) is Some(n) {
+		let n: N64 = N64::from_n32(n);
+		state.advance_one();
+		loop {
+			if state.peek_one() is Some(c) && char_to_n32(c) is Some(d) {
+				state.advance_one();
+				n = n.mul(N64::from_n32(10)).add(N64::from_n32(d));
+			} else {
+				return Ok(n)
+			}
+		}
+	} else { 
+		return Err("parse_n64: reached EOF!") 
 	}
 }
 pub fn skip_whitespace(&state: &State) {

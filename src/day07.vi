@@ -1,0 +1,124 @@
+
+use std::option::Option;
+use Option::{Some, None};
+
+/*
++++ 0
+*++ 1
++*+ 2 
+**+ 3
+++* 4
+...
+
+*/
+
+
+fn run(list: List[N64], i: N32, cap: N64) -> N64 {
+  let accum = list.pop_front().unwrap();
+  while list.pop_front() is Some(j) && accum.lte(cap) {
+    if (i % 2 == 0) ^ j.eq(N64::from_n32(1)) {
+      //io.print(" * " ++ j.to_string());
+      accum = accum.add(j);
+    } else{ 
+      //io.print(" + " ++ j.to_string());
+      accum = accum.mul(j);
+    }
+    i >>= 1;
+  }
+  return accum
+}
+
+fn run_ternary(list: List[N64], i: N32, cap: N64) -> N64 {
+  let accum = list.pop_front().unwrap();
+  while list.pop_front() is Some(j) && accum.lte(cap) {
+    if i % 3 < 2 {
+      if (i % 3 == 0) ^ j.eq(N64::from_n32(1))  {
+        accum = accum.add(j);
+        //io.print(" * " ++ j.to_string());
+      } else  { 
+        //io.print(" + " ++ j.to_string());;
+        accum = accum.mul(j);
+      }
+    } else {
+      accum = accum.concat(j);
+    }
+    i /= 3;
+  }
+  return accum
+}
+
+// try to quickly find it
+fn binary_search(list: List[N64], f: fn(List[N64], N32, N64) -> N64, target: N64, min: N32, max: N32) -> Option[N32] {
+  let i = (min + max) / 2
+  let result = f(list, i, target);
+  if result.eq(target) {
+    Some(i)
+  } else if max - min <= 1 {
+    None
+  } else if result.lt(target) {
+    binary_search(list, f, target, i+1, max)
+  } else if result.gt(target) {
+    binary_search(list, f, target, min, i)
+  } else {
+    None
+  }
+}
+fn brute_force_search(list: List[N64], f: fn(List[N64], N32, N64) -> N64, target: N64, min: N32, max: N32) -> Option[N32] {
+  let i = min;
+  while i < max {
+    if f(list, i, target).eq(target) {
+      return Some(i);
+    }
+    i += 1;
+  }
+  return None
+}
+
+fn dumb_n64_to_str(N64(lo, hi): N64) -> String { lo.to_string() ++ " + (" ++ hi.to_string() ++ " << 32)"  }
+mod util = "./util.vi";
+use util::{State, parse_n64,after,expect,pair,pair_and,repeat_while,map,first_error, N64};
+pub fn main(&io: &IO) {
+  let sum_part1: N64 = N64::from_n32(0);
+  let sum_part2: N64 = N64::from_n32(0);
+  let q = [];
+  let n = 0;
+  while io.read_line() is Some(l) {
+    n += 1;
+    io.println(n.to_string() ++ " " ++ l);
+    let parser = pair_and(pair(after(parse_n64, expect(":")), map(repeat_while(parse_n64, fn(&state: &State) {
+      if state.peek_one().unwrap_or('_') == ' ' {
+        state.advance_one();
+        true
+      } else {
+        false 
+      }
+    }), first_error)));
+    let state = State::from_string(l);
+    match parser(&state) {
+      std::result::Result::Ok(o) => {
+        let (target, list): (N64, List[N64]) = o;
+        //io.println(target.to_string() ++ " " ++ list.to_string(N64::to_string));
+        if binary_search(list, run, target, 0, 1 << list.len()) is Some(_) {
+          sum_part1 = sum_part1.add(target);
+        }  else if brute_force_search(list, run, target, 0, 1 << list.len()) is Some(_) {
+          sum_part1 = sum_part1.add(target);
+        }
+        let max = N64::from_n32(3).pow(N64::from_n32(list.len())).to_n32();
+        if binary_search(list, run_ternary, target, 0, max) is Some(_) {
+          sum_part2 = sum_part2.add(target);
+        }  else if brute_force_search(list, run_ternary, target, 0, max) is Some(_) {
+          sum_part2 = sum_part2.add(target);
+        }
+        if list.len() > 16 {
+          io.println(":(")
+        }
+        
+      },
+      std::result::Result::Err(e) => {
+        io.println(e)
+      }
+    }
+  }
+  io.println(sum_part1.to_string());
+  io.println(sum_part2.to_string());
+}

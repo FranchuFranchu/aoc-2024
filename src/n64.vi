@@ -1,0 +1,116 @@
+pub struct N64(N32, N32);
+
+pub mod N64 {
+  pub fn from_n32(val: N32) -> N64 {
+    N64(val, 0)
+  }
+
+  pub fn to_n32(N64(lo, hi): N64) -> N32 {
+    lo
+  }
+
+  pub fn lt(N64(lo1, hi1): N64, N64(lo2, hi2): N64) -> Bool {
+    if hi1 < hi2 {
+      return true
+    } else if hi1 > hi2 {
+      return false
+    } else {
+      return lo1 < lo2
+    }
+  }
+  pub fn lte(N64(lo1, hi1): N64, N64(lo2, hi2): N64) -> Bool {
+    if hi1 < hi2 {
+      return true
+    } else if hi1 > hi2 {
+      return false
+    } else {
+      return lo1 <= lo2
+    }
+  }
+  pub fn eq(N64(lo1, hi1): N64, N64(lo2, hi2): N64) -> Bool {
+    hi1 == hi2 && lo1 == lo2
+  }
+  pub fn gt(a: N64, b: N64) -> Bool {
+    b.lt(a)
+  }
+  pub fn gte(a: N64, b: N64) -> Bool {
+    b.lte(a)
+  }
+  pub fn add(N64(lo1, hi1): N64, N64(lo2, hi2): N64) -> N64 {
+    let (lo3, hi3) = std::n64::N64::add((lo1, hi1), (lo2, hi2));
+    N64(lo3, hi3)
+  }
+  pub fn sub(N64(lo1, hi1): N64, N64(lo2, hi2): N64) -> N64 {
+    if lo1 < lo2 {
+      N64(lo1 - lo2, hi1 - hi2 - 1)
+    } else {
+      N64(lo1 - lo2, hi1 - hi2)
+    }
+  }
+  pub fn mul(N64(lo1, hi1): N64, N64(lo2, hi2): N64) -> N64 {
+    let (lo3, hi3) = std::n64::N64::mul((lo1, hi1), (lo2, hi2));
+    N64(lo3, hi3)
+  }
+  pub fn hi(N64(lo1, hi1): N64) -> N32 { hi1 }
+  pub fn lo(N64(lo1, hi1): N64) -> N32 { lo1 }
+  // log10, rounded down
+  pub fn log10(a: N64) -> N64 {
+    if a.gte(N64::from_n32(10)) {
+      let (q, rem) = a.div_rem(N64::from_n32(10));
+      log10(q).add(N64::from_n32(1))
+    } else {
+      N64::from_n32(0)
+    }
+  }
+  pub fn pow(a: N64, b: N64) -> N64 {
+    if b.eq(N64::from_n32(0)) {
+      N64::from_n32(1)
+    } else {
+      a.mul(a.pow(b.sub(N64::from_n32(1))))
+    }
+  }
+  pub fn concat(a: N64, b: N64) -> N64 {
+    a.mul(N64::from_n32(10).pow(b.log10().add(N64::from_n32(1)))).add(b)
+  }
+  pub fn div_rem(a: N64, b: N64) -> (N64, N64) {
+    fn choose_times(a: N64, b: N64) -> N64 {
+      if a.hi() > 2 && b.hi() != 0 {
+        N64::from_n32((a.hi() - 1) / b.hi())
+      } else if a.hi() == 1 && b.hi() == 1 {
+        N64::from_n32(1)
+      } else if a.hi() != 0 && b.hi() == 0 {
+        N64::from_n32((0xFFFFFFFF / b.lo()) * a.hi())
+      } else {
+        N64::from_n32(1)
+      }
+    }
+    let q = N64(0, 0);
+    while b.lte(a) {
+      if a.hi() == 0 && b.hi() == 0 {
+        let ap = a.to_n32();
+        let bp = b.to_n32();
+        q = q.add(N64::from_n32(ap / bp))
+        a = N64::from_n32(ap % bp);
+        break;
+      }
+      let times = choose_times(a, b)
+      a = a.sub(b.mul(times))
+      q = q.add(times);
+    }
+    return (q, a)
+  }
+  pub fn to_string(n: N64) -> String {
+    if !(n.eq(N64::from_n32(0))) {
+      let str = "";
+      while !(n.eq(N64::from_n32(0))) {
+        let (div, rem) = n.div_rem(N64::from_n32(10));
+        let rem = rem.to_n32();
+        str = ['0' + rem] ++ str;
+        n = div;
+      }
+      str
+    } else {
+      "0"
+    }
+  }
+}
