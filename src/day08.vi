@@ -1,0 +1,185 @@
+use std::map::{Ord, Map};
+use std::option::Option;
+use Option::{Some, None};
+use std::array::Array;
+
+pub struct Vec2d(N32, N32);
+
+pub fn is_neg(x: N32) -> Bool {
+    x >= (1 << 31)
+}
+
+pub mod Vec2d {
+    pub fn add(Vec2d(x0, y0): Vec2d, Vec2d(x1, y1): Vec2d) -> Vec2d {
+        Vec2d(x0 + x1, y0 + y1)
+    }
+    pub fn sub(Vec2d(x0, y0): Vec2d, Vec2d(x1, y1): Vec2d) -> Vec2d {
+        Vec2d(x0 - x1, y0 - y1)
+    }
+    pub fn make_coprime(Vec2d(x0, y0): Vec2d) -> Vec2d {
+        // simplifies as a fraction
+        // we have to remove signedness here, then add it back later.
+        let x0_was_neg = false;
+        let y0_was_neg = false;
+        if is_neg(x0) {
+            x0_was_neg = true;
+            x0 = 0 - x0
+        }
+        if is_neg(y0) {
+            y0_was_neg = true;
+            y0 = 0 - y0
+        }
+        let i = 2;
+        while i * i <= x0 && i * i <= y0 {
+            if x0 == 0 && y0 == 0 {
+                return Vec2d(x0, y0)
+            }
+            if x0 % i == 0 && y0 % i == 0 {
+                x0 /= i
+                y0 /= i
+            } else {
+                i += 1
+            }
+        }
+        if x0_was_neg {
+            x0 = 0 - x0
+        }
+        if y0_was_neg {
+            y0 = 0 - y0
+        }
+        Vec2d(x0, y0)
+    }
+    pub fn to_string(Vec2d(x0, y0): Vec2d) -> String {
+       "Vec2d(" ++ x0.to_string() ++ ", " ++ y0.to_string() ++ ")"
+    }
+    pub fn in_bounds(Vec2d(x, y): Vec2d, Vec2d(w, h): Vec2d) -> Bool {
+        (x < w) && (y < h)
+    }
+}
+
+
+pub fn num_ordering(&a: &N32, &b: &N32) -> Ord {
+    if a < b {
+        Ord::Lt
+    } else if a > b {
+        Ord::Gt
+    } else {
+        Ord::Eq
+    }
+}
+
+pub fn char_ordering(&a: &Char, &b: &Char) -> Ord {
+    num_ordering(&a.as_n32(), &b.as_n32())
+} 
+pub fn vec2d_ordering(&Vec2d(x0, y0): &Vec2d, &Vec2d(x1, y1): &Vec2d) -> Ord {
+    let o = num_ordering(&x0, &x1);
+    if o is Ord::Eq {
+        num_ordering(&y0, &y1)
+    } else {
+        o
+    }
+} 
+
+pub fn combinations[T](l: List[T], k: N32) -> List[List[T]] {
+    if k == 0 {
+        return [[]]
+    }
+    if l.len() == 0 {
+        return []
+    }
+    let result = [];
+    let first = l.pop_front().unwrap();
+    let rest = l;
+    let sub_combinations = combinations(rest, k - 1);
+    while sub_combinations.pop_front() is Some(combination) {
+        result ++= [[first] ++ combination]
+    }
+    result ++= combinations(rest, k);
+    result
+}
+
+pub fn main(&io: &IO){
+    let input = io.full_input();
+    let x = 0;
+    let y = 0;
+    let w = 0;
+    let h = 0;
+    let frequency_antennas: Map[Char, List[Vec2d]] = Map::new(char_ordering);
+    while input.pop_front() is Some(i) {
+        if i == '.' {
+            x += 1;
+        } else if i == '\n' {
+            x = 0;
+            y += 1;
+        } else {
+            let l = frequency_antennas.remove(&i).unwrap_or([])
+            l.push_back(Vec2d(x, y))
+            frequency_antennas.insert(i, l);
+            x += 1;
+        }
+        if y > h {
+            h = y
+        }
+        if x > w {
+            w = x
+        }
+    }
+    let antinodes_p1 = Map::new(vec2d_ordering);
+    let antinodes_p2 = Map::new(vec2d_ordering);
+    let l = frequency_antennas.to_list();
+    //io.println(l.to_string(fn((k, v): (Char, List[Vec2d])) { [k] ++ ": " ++ v.to_string(Vec2d::to_string)}))
+    while l.pop_front() is Some((k, v)) {
+        let combs = combinations(v, 2);
+        while combs.pop_front() is Some(v) {
+            let a = v.pop_front().unwrap();
+            let b = v.pop_front().unwrap();
+            let anti_b = a.sub(b).add(a);
+            let anti_a = b.sub(a).add(b);
+            if anti_a.in_bounds(Vec2d(w, h)) {
+                if antinodes_p1.get(&anti_a) is None {
+                    antinodes_p1.insert(anti_a, ());
+                }
+            }
+            if anti_b.in_bounds(Vec2d(w, h)) {
+                if antinodes_p1.get(&anti_b) is None {
+                    antinodes_p1.insert(anti_b, ());
+                }
+            }
+
+            let step = a.sub(b).make_coprime();
+            let i = a;
+            while i.in_bounds(Vec2d(w, h)) {
+                if antinodes_p2.get(&i) is None {
+                    antinodes_p2.insert(i, ());
+                }
+                i = i.add(step);
+            }
+            let i = a.sub(step);
+            while i.in_bounds(Vec2d(w, h)) {
+                if antinodes_p2.get(&i) is None {
+                    antinodes_p2.insert(i, ());
+                }
+                i = i.sub(step);
+            }
+        }
+    }
+    /*
+    let x = 0;
+    let y = 0;
+    while y < h {
+        while x < w {
+            if antinodes_p1.get(&Vec2d(x, y)) is Some(_) {
+                io.print("#");
+            } else {
+                io.print(".");
+            }
+            x += 1
+        }
+        io.println("");
+        x = 0
+        y += 1
+    }*/
+    
+    io.println("Part 1: " ++ antinodes_p1.len().to_string());
+    io.println("Part 2: " ++ antinodes_p2.len().to_string());
+}
