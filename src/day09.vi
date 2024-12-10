@@ -182,115 +182,28 @@ fn log2(n: N32) -> N32 {
 
 pub fn part_two(&io: &IO, line: String) {
   use ChunkState::{Used, Free};
-  let files: Array[ChunkState] = Array::empty;
-  let last_free = None;
-  let last_used = None;
-  let first_free = None;
+  // back-to-front
+  let used: List[(N32, N32)] = [];
+  let lengths = Array::new(10, []);
   let will_parse_free = false;
   let file_count = 0;
-  let idx = 0;
+  let free_count = 0;
   while line.pop_front() is Some(c) {
-    let amount = N32::parse([c]).unwrap();
+    let amount = c - '0';
     if will_parse_free {
-      if last_free is Some(free_idx) {
-        (*files.get(free_idx)).set_reference(Some(idx));
-      }
-      if first_free is None {
-        first_free = Some(idx);
-      }
-      last_free = Some(idx);
-      files.push_back(ChunkState::Free(amount, None));
+      (*lengths.get(amount)).push_back(amount);
+      free_count += 1;
     } else {
-      files.push_back(ChunkState::Used(file_count, amount, None, last_used))
-      last_used = Some(idx);
+      used.push_front((file_count, amount));
       file_count += 1;
     }
-    idx += 1;
     will_parse_free = !will_parse_free
   }
-  use std::map::Map;
-  // We can avoid having to re-index the array by suffixing moved files to the files that are next to their new location.
-  // and turning removed files into zero-length files.
-  while last_used is Some(last_used_idx) {
-    let file = files.get(last_used_idx);
-    match file {
-      &Used(id, length, suffix, previous) => {
-        last_used = previous;
-        // find first free block that has enough space
-        let first_free_here = first_free;
-        io.println("Q = " ++ last_used_idx.to_string());
-        while first_free_here is Some(first_free_idx) {
-          let file = files.get(first_free_idx);
-          match file {
-            &Used(_, _, _, _) => {
-              io.println("Unexpected used chunk!");
-              break;
-            },
-            &Free(free_length, next) => {
-              //io.println(" L = " ++ first_free_idx.to_string());
-              if first_free_idx > last_used_idx {
-                first_free_here = None;
-              }
-              if free_length >= length && first_free_idx <= last_used_idx {
-                free_length -= length;
-                io.println(last_used_idx.to_string() ++ "(" ++ id.to_string() ++ ")" ++ " -> " ++ first_free_idx.to_string() ++ "(" ++ length.to_string() ++ ")" );
-                (*files.get(last_used_idx-1)).add_length(length);
-                (*files.get(first_free_idx-1)).suffix(Used(id, length, None, previous));
-                if suffix is Some(Used(id1, length1, suffix1, previous1)) {
-                  (id, length, suffix, previous) = (id1, length1, suffix1, previous1);
-                } else {
-                  length = 0;
-                };
-                first_free_here = None
-              } else {
-                first_free_here = next;
-              }
-            }
-          };
-        }
-      },
-      &Free(_, _) => {
-        io.println("Unexpected free chunk!");
-        break;
-      }
-    };
-  }
-  let idx = 0;
-  let sum_part2 = N64::from_n32(0);
-  fn update(&io: &IO, &sum_part2: &N64, &idx: &N32, state: ChunkState) {
-    match state {
-      Used(id, length, suffix, _) => {
-        // id * ( idx + idx + 1 + idx + 2 + ... + idx + length - 1)
-        // = id * ( idx * length + 1 + 2 + 3 + ... length - 1 )
-        // = id * ( idx * length + (length * length(-1)) / 2
-        //io.print(str_rep(['0' + id],length))
-        sum_part2 = sum_part2.add(N64::from_n32(id).mul(
-          N64::from_n32(idx).mul(N64::from_n32(length))
-          .add(
-            N64::from_n32(length).mul(N64::from_n32(length).sub(N64::from_n32(1))).shr(1)
-          )
-        ));
-        idx += length;
-        if suffix is Some(s) {
-          update(&io, &sum_part2, &idx, s);
-        }
-      },
-      Free(length, _) => {
-        //io.print(str_rep(".",length))
-        idx += length;
-      }
-    }
-  }
-  let l = files.to_list();
-  while l.pop_front() is Some(i) {
-    update(&io, &sum_part2, &idx, i);
-  }
-  io.println("");
-  io.println(sum_part2.to_string())
+  
 }
 
 pub fn main(&io: &IO) {
   let line = io.read_line().unwrap();
   //part_one(&io, line);
-  part_two(&io, line);
+  //part_two(&io, line);
 }

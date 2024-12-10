@@ -1,8 +1,6 @@
 
 // Parser combinators
 use std::{result::{Result, Result::{Ok, Err}}, option::{Option, Option::{Some, None}}};
-pub mod n64 = "./n64.vi";
-pub use n64::N64;
 
 // (consumed, remaining)
 pub struct State(List[Char], List[Char]);
@@ -96,6 +94,7 @@ pub fn parse_n32(&state: &State) -> Result[N32, String] {
 		return Err("parse_n32: reached EOF!") 
 	}
 }
+use std::n64::N64;
 pub fn parse_n64(&state: &State) -> Result[N64, String] {
 	if state.peek_one() is Some(c) && char_to_n32(c) is Some(n) {
 		let n: N64 = N64::from_n32(n);

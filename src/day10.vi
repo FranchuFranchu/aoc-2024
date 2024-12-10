@@ -1,0 +1,110 @@
+mod util = "./util.vi";
+
+use std::option::Option;
+use Option::{Some, None};
+use std::map::Map;
+
+ // (Reachable H9 set, rating)
+// used for part 1 and part 2 respectively
+pub type Msg = (Map[N32, ()], N32);
+
+
+struct DagNode[T](N32, N32, List[~T], List[T]);
+
+mod DagNode {
+    pub fn maybe_connect[T](&DagNode(_, h0, u0, d0): &DagNode[T], &DagNode(_, h1, u1, d1): &DagNode[T]) {
+        if h0 == h1 + 1 {
+            let c;
+            u0.push_back(~c);
+            d1.push_back(c);
+        }
+        if h0 + 1 == h1 {
+            let c;
+            u1.push_back(~c);
+            d0.push_back(c);
+        }
+    }
+    pub fn height[T](&DagNode(_, h0, u0, d0): &DagNode[T]) -> N32 {
+        h0
+    }
+    pub fn fold_msgs(&DagNode(id, h0, u0, d0): &DagNode[Msg]) -> Msg {
+        let set = Map::new(N32::cmp);
+        let sum = 0;
+        while d0.pop_front() is Some((set_here, sum_here)) {
+            let set_here = set_here.to_list()
+            while set_here.pop_front() is Some((k, _)) {
+                set.insert(k, ());
+            }
+            sum += sum_here
+        }
+        (set, sum)
+    }
+    pub fn run(node: DagNode[Msg]) {
+        let (set, sum) = node.fold_msgs();
+        let DagNode(id, h0, u0, d0) = node;
+        if h0 == 9 {
+            set.insert(id, ());
+            sum += 1;
+        }
+        while u0.pop_front() is Some(i) {
+            ~i = (set, sum);
+        }
+    }
+    pub fn score_rating(node: DagNode[Msg]) -> (N32, N32) {
+        let (set, sum) = node.fold_msgs();
+        (set.len(), sum)
+    }
+}
+
+pub fn main(&io: &IO) {
+    let north = [];
+    let west: Option[DagNode] = None;
+    let theads = [];
+    let x = 0;
+    let y = 0;
+    let id = 0;
+    let input = io.full_input();
+    dyn fn run_node(node: DagNode[Msg]) {
+        if node.height() == 0 {
+            theads.push_back(node);
+        } else {
+            node.run();
+        }
+    }
+    while input.pop_front() is Some(i) {
+        if i == '\n' {
+            x = 0;
+            y += 1;
+            if west is Some(west) {
+                north.push_back(west);
+            }
+            west = None;
+        } else {
+            let height = i - '0'
+            let node = DagNode(id, height, [], []);
+            if west is Some(west) {
+                west.maybe_connect(&node);
+                north.push_back(west);
+            }
+            if y > 0 && north.pop_front() is Some(north) {
+                north.maybe_connect(&node);
+                run_node(north);
+            }
+            west = Some(node);
+            x += 1;
+            
+            id += 1;
+        }
+    }
+    while north.pop_front() is Some(north) {
+        run_node(north);
+    }
+    if west is Some(west) {
+        run_node(west);
+    }
+    let (score, rating) = util::fold(theads.map(DagNode::score_rating), fn((s0, r0): (N32, N32), (s1, r1): (N32, N32)) {
+        (s0 + s1, r0 + r1)
+    }, (0, 0));
+    io.println("Part 1: " ++ score.to_string());
+    io.println("Part 2: " ++ rating.to_string());
+}
