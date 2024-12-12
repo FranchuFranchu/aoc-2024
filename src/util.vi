@@ -71,7 +71,7 @@ pub fn pair[T, U](fst: fn(&State) -> T, snd: fn(&State) -> U) -> fn(&State) -> (
 		(fst, snd)
 	}
 }
-fn char_to_n32(c: Char) -> Option[N32] {
+pub fn char_to_n32(c: Char) -> Option[N32] {
 	let c = c.as_n32();
 	if c >= '0'.as_n32() && c <= '9'.as_n32() {
 		Some(c - '0'.as_n32())

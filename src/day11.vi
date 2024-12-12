@@ -1,0 +1,193 @@
+use std::option::Option;
+use Option::{Some, None};
+mod util = "./util.vi";
+use util::{repeat_while, parse_n32,skip_whitespace,after,invert,is_eof, State,first_error};
+
+pub struct Decimal(List[N32]);
+
+pub mod Decimal {
+    pub fn add(Decimal(self): Decimal, Decimal(other): Decimal) -> Decimal {
+    if Decimal(self).is_zero() {
+      return Decimal(other)
+    }
+    if Decimal(other).is_zero() {
+      return Decimal(self)
+    }
+    let l0 = self.pop_front().unwrap_or(0);
+    let l1 = other.pop_front().unwrap_or(0);
+    let self = Decimal(self);
+    let other = Decimal(other);
+    let sum = l0 + l1
+    let high = self.add(other).add(Decimal([sum / 10]))
+    Decimal([sum % 10] ++ high.to_list())
+  }
+  pub fn shl(Decimal(self): Decimal) -> Decimal {
+    Decimal([0] ++ self)
+  }
+  pub fn to_list(Decimal(self): Decimal) -> List[N32] {
+    self
+  }
+  pub fn to_canon_list(self: Decimal) -> List[N32] {
+    let l = self.to_list();
+    let l2 = [];
+    let l3 = [];
+    while l.pop_front() is Some(i) {
+      if i == 0 {
+        l2 = l2 ++ [i]
+      } else {
+        l3 = l3 ++ l2 ++ [i]
+        l2 = []
+      }
+    }
+    l3
+  }
+  pub fn is_zero(Decimal(self): Decimal) -> Bool {
+    if self.pop_front() is Some(a) {
+      a == 0 && Decimal(self).is_zero()
+    } else {
+      true
+    }
+  }
+  pub fn mul(Decimal(self): Decimal, Decimal(other): Decimal) -> Decimal {
+    if Decimal(self).is_zero() || Decimal(other).is_zero() {
+      return Decimal([])
+    }
+    let l0 = self.pop_front().unwrap_or(0);
+    let l1 = other.pop_front().unwrap_or(0);
+    let self = Decimal(self);
+    let other = Decimal(other);
+    let prod = l0 * l1;
+    let high = self.mul(other).shl()
+      .add(self.mul(Decimal([l1])))
+      .add(other.mul(Decimal([l0])))
+      .add(Decimal([prod / 10]));
+    Decimal([prod % 10] ++ high.to_list())
+  }
+}
+
+type LMsg = N32;
+enum Unit { Unit, Other }
+mod Unit {
+  pub fn laz[T](&self: &Unit, a: T) -> T {
+    match self {
+      Unit::Unit => a,
+      Other => ~_
+    } 
+  }
+}/*
+type RMsg = ~N32;
+pub struct Stone(Decimal, RMsg, Option[~RMsg]);
+mod Stone {
+  pub fn run(Stone( n, ltx, rtx): Stone, blinks: N32) {
+    if blinks > 0 {
+      if n.is_zero() {
+        Stone(Decimal([1]), ltx, rtx).run(blinks-1);
+      } else {
+      let right = n.to_canon_list();
+        if right.len() % 2 == 0 {
+          let left = []
+          while left.len() != right.len() {
+            left.push_back(right.pop_front().unwrap())
+          }
+          let new_message;
+          Stone(Decimal(left), ltx, Some(~new_message)).run(blinks-1);
+          Stone(Decimal(right), new_message, rtx).run(blinks-1);
+        } else {
+          Stone(n.mul(Decimal([4,0,4,2])), ltx, rtx).run(blinks-1);
+        }
+      }
+    } else {
+      ~ltx = match rtx {
+        Some(rtx) => {
+          let rrx;
+          ~rtx = ~rrx; 
+          rrx
+        },
+        None => {0}
+      } + 1;
+    }
+  }
+}*/
+
+use std::n64::N64;
+type RMsg = ~N32;
+pub struct Stone(N64, RMsg, Option[~RMsg]);
+mod Stone {
+  pub fn run(Stone( n, ltx, rtx): Stone, blinks: N32) {
+    if blinks > 0 {
+      if n.eq(N64::from_n32(0)) {
+        Stone(N64::from_n32(1), ltx, rtx).run(blinks-1);
+      } else {
+        let right = n.to_string();
+        if right.len() % 2 == 0 {
+          let left = []
+          while left.len() != right.len() {
+            left.push_back(right.pop_front().unwrap())
+          }
+          let new_message;
+          Stone(N64::parse(left).unwrap(), ltx, Some(~new_message)).run(blinks-1);
+          Stone(N64::parse(right).unwrap(), new_message, rtx).run(blinks-1);
+        } else {
+          Stone(n.mul(N64::from_n32(2024)), ltx, rtx).run(blinks-1);
+        }
+      }
+    } else {
+      ~ltx = match rtx {
+        Some(rtx) => {
+          let rrx;
+          ~rtx = ~rrx; 
+          rrx
+        },
+        None => {0}
+      } + 1
+    }
+  }
+}
+use util::char_to_n32;
+use std::result::Result;
+use Result::Ok;
+pub fn parse_decimal(&state: &State) -> Result[Decimal, String] {
+  let l = [];
+  while state.peek_one() is Some(c) && char_to_n32(c) is Some(d) {
+    state.advance_one();
+    l.push_front(d);
+  }
+  Ok(Decimal(l))
+}
+pub fn main(&io: &IO) {
+  let input = io.full_input();
+  let parser = repeat_while(after(parse_n32, skip_whitespace),invert(is_eof));
+  let a = first_error(parser(&State::from_string(input))).unwrap_or([]);
+  let l = [];
+  let o_rx;
+  
+  let message =  ~o_rx;
+  let last_stone = None;
+
+  let l = []
+  
+  
+  while a.pop_front() is Some(stone) {
+    let stone = N64::from_n32(stone);
+    if last_stone is Some(number) {
+      let next_message;
+      l.push_back(Stone(number, message, Some(~next_message)))
+      message = next_message;
+    }
+    last_stone = Some(stone)
+  }
+  if last_stone is Some(number) {
+    l.push_back(Stone(number, message, None));
+  }
+  while l.pop_front() is Some(i) {i.run(25);}
+  /*
+  let (m_tx, m_rx);
+  let aa = Stone(a.pop_front().unwrap(), ~m_tx, ~m_rx, None);
+  let bb = Stone(a.pop_front().unwrap(), RMsg::Tick(RMsg::ReqCount), ~o_rx, Some((m_rx, m_tx)));
+  let l = [
+    bb,
+    aa
+  ]*/
+  io.println(o_rx.to_string());
+  io.println("Recv");
+}
